@@ -19,7 +19,7 @@ export default function LogoutButton() {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await logout("151c7b7a-f322-4580-a956-d2ad4ad3d243");
+      await logout(user.id);
       clearUser();
       router.push("/login");
     } catch (error) {
