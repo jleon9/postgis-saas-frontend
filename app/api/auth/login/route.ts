@@ -3,7 +3,7 @@ import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import argon2 from "argon2";
 import { prisma } from "@/lib/prisma/prisma";
-import { RefreshTokenService } from "@/lib/auth/services/UserTokenService";
+import { RefreshTokenService } from "@/lib/auth/services/RefreshTokenService";
 
 export async function POST(request: Request) {
   try {

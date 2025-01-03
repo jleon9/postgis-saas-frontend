@@ -15,6 +15,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         refetchInterval: false,
         // Show stale data while fetching
         staleTime: Infinity,
+        // Keep data cached
+        gcTime: 1000 * 60 * 30, // Garbage Collection every 30 minutes
         // Retry failed requests just once
         retry: 1,
       },

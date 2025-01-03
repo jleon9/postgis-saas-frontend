@@ -2,7 +2,7 @@
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { PUBLIC_PATHS } from "@/middleware";
-import { RefreshTokenService } from "@/lib/auth/services/UserTokenService";
+import { RefreshTokenService } from "@/lib/auth/services/RefreshTokenService";
 import { prisma } from "@/lib/prisma/prisma";
 
 async function refreshTokens(request: Request) {
