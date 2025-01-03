@@ -1,0 +1,131 @@
+// schema.zmodel
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+    previewFeatures = ["fullTextSearchPostgres"]
+}
+
+// Base model with common fields
+abstract model Base {
+    id        String   @id @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// Role model
+model Role extends Base {
+    name        String  @unique // "ADMIN", "MEMBER", etc.
+    description String?
+    users       User[]
+
+    // Access policies
+    @@allow('create,update,delete', auth().role.name == 'ADMIN')
+    @@allow('read', true)
+}
+
+// Organization (Tenant) model
+model Organization extends Base {
+    name    String   @unique
+    slug    String   @unique
+    domain  String?  @unique
+    users   User[]
+    authors Author[]
+    posts   Post[]
+
+    // Access policies
+    @@allow('create', true)
+    @@allow('read', true)
+    @@allow('update,delete', auth().organization.id == id && auth().role.name == 'ADMIN')
+}
+
+// User (System User) model
+model User extends Base {
+    email          String        @unique
+    password       String
+    name           String
+    role           Role          @relation(fields: [roleId], references: [id])
+    roleId         String
+    organization   Organization  @relation(fields: [organizationId], references: [id])
+    organizationId String
+    refreshToken   RefreshToken?
+
+    // Indices
+    @@index([email])
+    @@index([organizationId])
+
+    // Access policies
+    @@allow('create', true)
+    @@allow('read', auth().organization.id == organizationId)
+    @@allow('update', auth().id == id || auth().role.name == 'ADMIN')
+    @@allow('delete', auth().role.name == 'ADMIN')
+}
+
+// RefreshToken model
+model RefreshToken extends Base {
+    hashedToken String
+    expires     DateTime
+    revoked     Boolean  @default(false)
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String   @unique
+
+    // Indices
+    @@index([hashedToken])
+
+    // Access policies
+    @@allow('create', true)
+    @@allow('read,update,delete', auth().id == userId)
+}
+
+// Author model
+model Author extends Base {
+    name           String
+    email          String       @unique
+    posts          Post[]
+    organization   Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+
+    // Indices
+    @@index([email])
+    @@index([organizationId])
+
+    // Access policies
+    @@allow('create', auth().organization.id == organizationId && auth().role.name == 'ADMIN')
+    @@allow('read', auth().organization.id == organizationId)
+    @@allow('update,delete', auth().organization.id == organizationId && auth().role.name == 'ADMIN')
+}
+
+// Post model
+model Post extends Base {
+    title          String
+    content        String       @db.Text
+    tags           String[]     @default([])
+    author         Author       @relation(fields: [authorId], references: [id])
+    authorId       String
+    organization   Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+  
+    // Regular indices
+    @@index([authorId])
+    @@index([organizationId])
+    @@index([tags])
+
+    // Access policies
+    @@allow('create', auth().organization.id == organizationId)
+    @@allow('read', auth().organization.id == organizationId)
+    @@allow('update,delete', 
+    auth().organization.id == organizationId && 
+    (auth().role.name == 'ADMIN' || auth().id == author.id)
+  )
+}
+
+// Configure plugins
+plugin hooks {
+    provider = '@zenstackhq/tanstack-query'
+    output = 'lib/hooks/zenstack'
+    target = 'react'
+}
