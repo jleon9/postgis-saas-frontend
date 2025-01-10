@@ -7,7 +7,7 @@ LOAD 'age';
 SET search_path = ag_catalog, "$user", public;
 
 -- Create graph
-SELECT create_graph('geosocial_graph');
+SELECT create_graph('geo_graph');
 
 -- Create spatial functions
 CREATE OR REPLACE FUNCTION calculate_distance(

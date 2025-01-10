@@ -92,6 +92,12 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'organization',
+                }, properties: {
+                    name: "properties",
+                    type: "Property",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'organization',
                 },
             }
             , uniqueConstraints: {
@@ -334,6 +340,177 @@ const metadata = {
                     type: "String",
                     isForeignKey: true,
                     relationField: 'organization',
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                },
+            }
+            ,
+        }
+        ,
+        property: {
+            name: 'Property', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, organization: {
+                    name: "organization",
+                    type: "Organization",
+                    isDataModel: true,
+                    backLink: 'properties',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "organizationId" },
+                }, organizationId: {
+                    name: "organizationId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'organization',
+                }, address: {
+                    name: "address",
+                    type: "String",
+                }, price: {
+                    name: "price",
+                    type: "Decimal",
+                }, bedrooms: {
+                    name: "bedrooms",
+                    type: "Int",
+                }, bathrooms: {
+                    name: "bathrooms",
+                    type: "Int",
+                }, sqft: {
+                    name: "sqft",
+                    type: "Int",
+                }, location: {
+                    name: "location",
+                    type: "String",
+                }, similarToProperties: {
+                    name: "similarToProperties",
+                    type: "PropertySimilarity",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'property',
+                }, similarFromProperties: {
+                    name: "similarFromProperties",
+                    type: "PropertySimilarity",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'similarProperty',
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                },
+            }
+            ,
+        }
+        ,
+        propertySimilarity: {
+            name: 'PropertySimilarity', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, propertyId: {
+                    name: "propertyId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'property',
+                }, similarPropertyId: {
+                    name: "similarPropertyId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'similarProperty',
+                }, similarity_score: {
+                    name: "similarity_score",
+                    type: "Float",
+                }, priceScore: {
+                    name: "priceScore",
+                    type: "Float",
+                }, sizeScore: {
+                    name: "sizeScore",
+                    type: "Float",
+                }, locationScore: {
+                    name: "locationScore",
+                    type: "Float",
+                }, amenityScore: {
+                    name: "amenityScore",
+                    type: "Float",
+                }, property: {
+                    name: "property",
+                    type: "Property",
+                    isDataModel: true,
+                    backLink: 'similarToProperties',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "propertyId" },
+                }, similarProperty: {
+                    name: "similarProperty",
+                    type: "Property",
+                    isDataModel: true,
+                    backLink: 'similarFromProperties',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "similarPropertyId" },
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                }, propertyId_similarPropertyId: {
+                    name: "propertyId_similarPropertyId",
+                    fields: ["propertyId", "similarPropertyId"]
+                },
+            }
+            ,
+        }
+        ,
+        amenity: {
+            name: 'Amenity', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, name: {
+                    name: "name",
+                    type: "String",
+                }, type: {
+                    name: "type",
+                    type: "String",
+                }, location: {
+                    name: "location",
+                    type: "String",
                 },
             }
             , uniqueConstraints: {

@@ -1,6 +1,6 @@
 // lib/auth/authTypes.ts
 
-import { Organization, Role, User } from "@prisma/client";
+import { Organization, Role } from "@prisma/client";
 
 // types/auth.ts
 export interface RefreshTokenPayload {

@@ -23,15 +23,16 @@ model Role {
 }
 
 model Organization {
-  id        String   @id() @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt()
-  name      String   @unique()
-  slug      String   @unique()
-  domain    String?  @unique()
-  users     User[]
-  authors   Author[]
-  posts     Post[]
+  id         String     @id() @default(uuid())
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt()
+  name       String     @unique()
+  slug       String     @unique()
+  domain     String?    @unique()
+  users      User[]
+  authors    Author[]
+  posts      Post[]
+  properties Property[]
 }
 
 model User {
@@ -93,4 +94,47 @@ model Post {
   @@index([authorId])
   @@index([organizationId])
   @@index([tags])
+}
+
+model Property {
+  id                    String               @id() @default(uuid())
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt()
+  organization          Organization         @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  address               String
+  price                 Decimal
+  bedrooms              Int
+  bathrooms             Int
+  sqft                  Int
+  location              String
+  similarToProperties   PropertySimilarity[] @relation("SimilarToProperties")
+  similarFromProperties PropertySimilarity[] @relation("SimilarFromProperties")
+}
+
+model PropertySimilarity {
+  id                String   @id() @default(uuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt()
+  propertyId        String
+  similarPropertyId String
+  similarity_score  Float
+  priceScore        Float
+  sizeScore         Float
+  locationScore     Float
+  amenityScore      Float
+  property          Property @relation("SimilarToProperties", fields: [propertyId], references: [id])
+  similarProperty   Property @relation("SimilarFromProperties", fields: [similarPropertyId], references: [id])
+
+  @@unique([propertyId, similarPropertyId])
+  @@index([similarity_score])
+}
+
+model Amenity {
+  id        String   @id() @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+  name      String
+  type      String
+  location  String
 }

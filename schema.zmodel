@@ -30,12 +30,13 @@ model Role extends Base {
 
 // Organization (Tenant) model
 model Organization extends Base {
-    name    String   @unique
-    slug    String   @unique
-    domain  String?  @unique
-    users   User[]
-    authors Author[]
-    posts   Post[]
+    name       String     @unique
+    slug       String     @unique
+    domain     String?    @unique
+    users      User[]
+    authors    Author[]
+    posts      Post[]
+    properties Property[]
 
     // Access policies
     @@allow('create', true)
@@ -121,6 +122,49 @@ model Post extends Base {
     auth().organization.id == organizationId && 
     (auth().role.name == 'ADMIN' || auth().id == author.id)
   )
+}
+
+model Property extends Base {
+    organization          Organization         @relation(fields: [organizationId], references: [id])
+    organizationId        String
+    address               String
+    price                 Decimal
+    bedrooms              Int
+    bathrooms             Int
+    sqft                  Int
+    // We'll store PostGIS point as text and convert when needed
+    location              String
+    // Add relations for similarities
+    similarToProperties   PropertySimilarity[] @relation("SimilarToProperties")
+    similarFromProperties PropertySimilarity[] @relation("SimilarFromProperties")
+    // Access policies
+    @@allow('create', auth().organization.id == organizationId && auth().role.name == 'ADMIN')
+    @@allow('read', auth().organization.id == organizationId)
+    @@allow('update,delete', auth().organization.id == organizationId && auth().role.name == 'ADMIN')
+}
+
+// Replace graph relationships with a regular table
+model PropertySimilarity extends Base {
+    propertyId        String
+    similarPropertyId String
+    similarity_score  Float
+    priceScore        Float
+    sizeScore         Float
+    locationScore     Float
+    amenityScore      Float
+
+    property          Property @relation("SimilarToProperties", fields: [propertyId], references: [id])
+    similarProperty   Property @relation("SimilarFromProperties", fields: [similarPropertyId], references: [id])
+
+    @@unique([propertyId, similarPropertyId])
+    @@index([similarity_score])
+}
+
+model Amenity extends Base {
+    name     String
+    type     String
+    // Store location as text for PostGIS
+    location String
 }
 
 // Configure plugins

@@ -2,7 +2,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { QueryProvider } from "@/components/QueryClientProvider";
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
