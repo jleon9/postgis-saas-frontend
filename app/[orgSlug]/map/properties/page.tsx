@@ -1,5 +1,4 @@
 "use client";
-import Loading from "@/components/loader/Loading";
 import { PropertyMap } from "@/components/real-estate/map/PropertyMap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,8 +63,6 @@ export default function Home() {
     }
   };
 
-  
-
   if (isError) {
     return (
       <div className="container mx-auto py-8">
@@ -118,6 +115,19 @@ export default function Home() {
               </div>
             </div>
 
+            <div>
+              <label className="text-sm font-medium">
+                Cluster Max Radius: {(maxRadius)}km
+              </label>
+              <Slider
+                defaultValue={[maxRadius]}
+                max={12}
+                min={0.5}
+                step={0.5}
+                onValueChange={([value]) => setMaxRadius(value)}
+                className="mt-2"
+              />
+            </div>
             <div className="flex justify-end">
               <Button
                 onClick={computeClusters}
@@ -161,7 +171,7 @@ export default function Home() {
                             console.log("CLUSTER_ID: ", cluster.cluster_id);
                             return {
                               ...cluster,
-                              id: cluster.cluster_id
+                              id: cluster.cluster_id,
                             };
                           })
                         : []

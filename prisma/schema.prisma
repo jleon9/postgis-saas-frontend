@@ -13,6 +13,11 @@ generator client {
   previewFeatures = ["fullTextSearchPostgres"]
 }
 
+generator seeding_generator {
+  provider = "prisma-generator-fake-data"
+  output   = "./fake-data.ts"
+}
+
 model Role {
   id          String   @id() @default(uuid())
   createdAt   DateTime @default(now())
@@ -107,6 +112,7 @@ model Property {
   bedrooms              Int
   bathrooms             Int
   sqft                  Int
+  ///FAKE:`POINT(${faker.location.longitude()} ${faker.location.latitude()})`
   location              String
   similarToProperties   PropertySimilarity[] @relation("SimilarToProperties")
   similarFromProperties PropertySimilarity[] @relation("SimilarFromProperties")

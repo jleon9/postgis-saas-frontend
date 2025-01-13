@@ -23,10 +23,7 @@ export async function GET(request: Request) {
     // Update Similarities
     await analyticsService.updateSimilarities(maxGeographicRadius);
     // Redetect clusters based on those new similarities
-    const clusters = await analyticsService.findPropertyClusters(
-      minSimilarity,
-      maxGeographicRadius
-    );
+    const clusters = await analyticsService.findPropertyClusters(minSimilarity);
 
     // Enhance clusters with similarity scores
     const enhancedClusters = await Promise.all(

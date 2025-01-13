@@ -152,42 +152,164 @@ export class PropertyAnalyticsService {
   }
 
   async updateSimilarities(maxGeographicRadius: number = 5.0) {
-    // Get all properties
-    const properties = await this.prisma.property.findMany();
-    const similarities: PropertySimilarityResult[] = [];
+    const maxDistance = Math.trunc(maxGeographicRadius) * 1000;
 
-    // Calculate similarities between all pairs
-    for (let i = 0; i < properties.length; i++) {
-      for (let j = i + 1; j < properties.length; j++) {
-        const similarity = await this.calculatePropertySimilarity(
-          properties[i],
-          properties[j],
-          { maxGeographicRadius }
-        );
-        if (similarity.score > 0.7) {
-          // Only keep strong similarities
-          similarities.push(similarity);
-        }
-      }
-    }
+    // Calculate similarities in a single SQL query
+    const similarities = await this.prisma.$queryRaw<
+      Array<{
+        property1_id: string;
+        property2_id: string;
+        price_score: number;
+        size_score: number;
+        location_score: number;
+        amenity_score: number;
+        total_score: number;
+      }>
+    >`
+      WITH PropertyPairs AS (
+        SELECT 
+          p1.id as property1_id,
+          p2.id as property2_id,
+          p1.price as price1,
+          p2.price as price2,
+          p1.sqft as sqft1,
+          p2.sqft as sqft2,
+          p1.location as location1,
+          p2.location as location2
+        FROM "Property" p1
+        CROSS JOIN "Property" p2
+        WHERE p1.id < p2.id  -- Only compare each pair once
+        AND ST_DWithin(
+          ST_Transform(ST_SetSRID(p1.location::geometry, 4326), 3857),
+          ST_Transform(ST_SetSRID(p2.location::geometry, 4326), 3857),
+          ${maxDistance}
+        )
+      ),
+      PriceScores AS (
+        SELECT 
+          property1_id,
+          property2_id,
+          1 - LEAST(
+            ABS(price1::numeric - price2::numeric) / GREATEST(price1::numeric, price2::numeric),
+            1
+          ) as price_score
+        FROM PropertyPairs
+      ),
+      SizeScores AS (
+        SELECT 
+          property1_id,
+          property2_id,
+          1 - LEAST(
+            ABS(sqft1::numeric - sqft2::numeric) / GREATEST(sqft1::numeric, sqft2::numeric),
+            1
+          ) as size_score
+        FROM PropertyPairs
+      ),
+      LocationScores AS (
+        SELECT 
+          property1_id,
+          property2_id,
+          GREATEST(
+            0,
+            1 - (
+              ST_Distance(
+                ST_Transform(ST_SetSRID(location1::geometry, 4326), 3857),
+                ST_Transform(ST_SetSRID(location2::geometry, 4326), 3857)
+              ) / ${maxDistance}
+            )
+          ) as location_score
+        FROM PropertyPairs
+      ),
+      AmenityScores AS (
+        SELECT 
+          pp.property1_id,
+          pp.property2_id,
+          COALESCE(
+            CAST(common_count AS float) / GREATEST(p1_count, p2_count),
+            0
+          ) as amenity_score
+        FROM PropertyPairs pp
+        CROSS JOIN LATERAL (
+          SELECT 
+            COUNT(DISTINCT a1.type) as p1_count
+          FROM "Amenity" a1
+          WHERE ST_DWithin(
+            ST_SetSRID(pp.location1::geometry, 4326),
+            ST_SetSRID(a1.location::geometry, 4326),
+            ${maxDistance}
+          )
+        ) p1
+        CROSS JOIN LATERAL (
+          SELECT 
+            COUNT(DISTINCT a2.type) as p2_count
+          FROM "Amenity" a2
+          WHERE ST_DWithin(
+            ST_SetSRID(pp.location2::geometry, 4326),
+            ST_SetSRID(a2.location::geometry, 4326),
+            ${maxDistance}
+          )
+        ) p2
+        CROSS JOIN LATERAL (
+          SELECT 
+            COUNT(DISTINCT a1.type) as common_count
+          FROM "Amenity" a1
+          JOIN "Amenity" a2 ON a1.type = a2.type
+          WHERE ST_DWithin(
+            ST_SetSRID(pp.location1::geometry, 4326),
+            ST_SetSRID(a1.location::geometry, 4326),
+            ${maxDistance}
+          )
+          AND ST_DWithin(
+            ST_SetSRID(pp.location2::geometry, 4326),
+            ST_SetSRID(a2.location::geometry, 4326),
+            ${maxDistance}
+          )
+        ) common
+      )
+      SELECT 
+        ps.property1_id,
+        ps.property2_id,
+        ps.price_score,
+        ss.size_score,
+        ls.location_score,
+        ams.amenity_score,
+        (
+          ps.price_score * 0.3 + 
+          ss.size_score * 0.2 + 
+          ls.location_score * 0.3 + 
+          ams.amenity_score * 0.2
+        ) as total_score
+      FROM PriceScores ps
+      JOIN SizeScores ss ON ps.property1_id = ss.property1_id AND ps.property2_id = ss.property2_id
+      JOIN LocationScores ls ON ps.property1_id = ls.property1_id AND ps.property2_id = ls.property2_id
+      JOIN AmenityScores ams ON ps.property1_id = ams.property1_id AND ps.property2_id = ams.property2_id
+      WHERE (
+        ps.price_score * 0.3 + 
+        ss.size_score * 0.2 + 
+        ls.location_score * 0.3 + 
+        ams.amenity_score * 0.2
+      ) > 0.7
+    `;
 
-    // Batch update similarities
+    // Use a transaction for the batch update
     await this.prisma.$transaction(async (tx) => {
-      // Clear existing similarities
+      // Delete existing similarities
       await tx.propertySimilarity.deleteMany();
 
-      // Create new similarities in batch
-      await tx.propertySimilarity.createMany({
-        data: similarities.map((sim) => ({
-          propertyId: sim.propertyId1,
-          similarPropertyId: sim.propertyId2,
-          similarity_score: sim.score,
-          priceScore: sim.factors.priceScore,
-          sizeScore: sim.factors.sizeScore,
-          locationScore: sim.factors.locationScore,
-          amenityScore: sim.factors.amenityScore,
-        })),
-      });
+      // Batch insert new similarities
+      if (similarities.length > 0) {
+        await tx.propertySimilarity.createMany({
+          data: similarities.map((sim) => ({
+            propertyId: sim.property1_id,
+            similarPropertyId: sim.property2_id,
+            similarity_score: sim.total_score,
+            priceScore: sim.price_score,
+            sizeScore: sim.size_score,
+            locationScore: sim.location_score,
+            amenityScore: sim.amenity_score,
+          })),
+        });
+      }
     });
 
     return similarities;
@@ -195,7 +317,6 @@ export class PropertyAnalyticsService {
 
   async findPropertyClusters(
     minSimilarityScore: number = 0.7, // Keep default of 0.7 as requested
-    maxGeographicRadius: number = 5.0 // Updated to 5km as requested
   ) {
     // First phase: Find clusters based on similarity scores
     const similarityClusters = await this.prisma.$queryRaw<
@@ -233,13 +354,19 @@ export class PropertyAnalyticsService {
               AND sp.p2_id NOT IN (SELECT UNNEST(sc.cluster_members))
       )
       SELECT 
-          cluster_id, 
-          ARRAY_AGG(DISTINCT property_id) as property_ids,
-          AVG(similarity_score) as avg_similarity
+        cluster_id,
+        ARRAY_AGG(DISTINCT property_id) as property_ids, 
+        AVG(similarity_score) as avg_similarity,
+        ST_AsText(ST_Centroid(ST_Collect(ST_SetSRID(p.location::geometry, 4326)))) as center_point,
+        ST_MaxDistance(
+          ST_Centroid(ST_Collect(ST_SetSRID(p.location::geometry, 4326))), 
+          ST_Collect(ST_SetSRID(p.location::geometry, 4326))
+        ) as radius    
       FROM similarity_clusters sc
       LEFT JOIN similar_pairs sp ON 
-          sp.p1_id = ANY(sc.cluster_members) 
+          sp.p1_id = ANY(sc.cluster_members)
           AND sp.p2_id = ANY(sc.cluster_members)
+      LEFT JOIN "Property" p ON p.id = ANY(sc.cluster_members)
       GROUP BY cluster_id;
     `;
 

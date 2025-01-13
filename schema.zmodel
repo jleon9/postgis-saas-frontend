@@ -10,6 +10,11 @@ generator client {
     previewFeatures = ["fullTextSearchPostgres"]
 }
 
+generator seeding_generator {
+    provider = "prisma-generator-fake-data"
+    output   = "./fake-data.ts"
+}
+
 // Base model with common fields
 abstract model Base {
     id        String   @id @default(uuid())
@@ -133,6 +138,7 @@ model Property extends Base {
     bathrooms             Int
     sqft                  Int
     // We'll store PostGIS point as text and convert when needed
+    ///FAKE:`POINT(${faker.location.longitude()} ${faker.location.latitude()})`
     location              String
     // Add relations for similarities
     similarToProperties   PropertySimilarity[] @relation("SimilarToProperties")
