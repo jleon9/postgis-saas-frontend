@@ -1,26 +1,92 @@
 import { memo, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { PropertyCluster } from "./types/types";
+import { Decimal } from "@prisma/client/runtime/library";
+import { SelectionSource } from "./PropertyMap";
+import Loading from "@/components/loader/Loading";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
 // TypeScript interfaces
 interface MapItem {
+  id: string;
   latitude: number;
   longitude: number;
   title: string;
+  price: Decimal;
+  sqft: number;
+  bedrooms: number;
+  bathrooms: number;
 }
 
+// Map.tsx
 interface MapProps {
   items: MapItem[];
-  clusters: PropertyCluster[]; // Add clusters as a prop
+  clusters: PropertyCluster[];
+  selectedPropertyId: string;
+  onMarkerClick: (id: string) => void;
+  selectionSource: SelectionSource;
 }
 
-const Map = ({ items, clusters }: MapProps) => {
+const Map = ({
+  items,
+  clusters,
+  selectedPropertyId,
+  onMarkerClick,
+  selectionSource,
+}: MapProps) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const markersRef = useRef<Record<string, mapboxgl.Marker>>({});
+  const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
 
+  // Function to create popup HTML
+  const createPopupHTML = (item: MapItem) => {
+    return `
+      <div class="p-2">
+        <h3 class="font-bold mb-2">${item.title}</h3>
+        <p class="text-sm">Price: $${Number(item.price).toLocaleString()}</p>
+        <p class="text-sm">${item.sqft.toLocaleString()} sq ft</p>
+        <p class="text-sm">${item.bedrooms} beds • ${item.bathrooms} baths</p>
+      </div>
+    `;
+  };
+
+  const showPropertyPopup = (itemId: string) => {
+    console.log("Showing popup for:", itemId, "Source:", selectionSource);
+    if (!mapInstanceRef.current || !itemId) return;
+
+    // Remove existing popups
+    Object.values(popupsRef.current).forEach((popup) => popup.remove());
+    popupsRef.current = {};
+
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+
+    // Create and show popup
+    const popup = new mapboxgl.Popup({
+      offset: 25,
+      closeButton: true,
+      closeOnClick: false,
+      anchor: "bottom",
+    })
+      .setLngLat([item.longitude, item.latitude])
+      .setHTML(createPopupHTML(item));
+
+    popup.addTo(mapInstanceRef.current);
+    popupsRef.current[itemId] = popup;
+
+    // Center map if coming from analytics
+    if (selectionSource === "analytics") {
+      mapInstanceRef.current.flyTo({
+        center: [item.longitude, item.latitude],
+        zoom: 15,
+        duration: 1500,
+      });
+    }
+  };
+
+  // Initialize map
   useEffect(() => {
     if (!mapInstanceRef.current) {
       mapInstanceRef.current = new mapboxgl.Map({
@@ -44,25 +110,37 @@ const Map = ({ items, clusters }: MapProps) => {
     };
   }, []);
 
+  // 2. Handle markers and clusters
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    if (!map || !mapInstanceRef.current.isStyleLoaded) {
+      return;
+    }
 
-    // Wait for the map's style to load
     const handleStyleLoad = () => {
-      // Remove existing markers
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
+      // Clear existing markers and popups
+      Object.values(markersRef.current).forEach((marker) => marker.remove());
+      Object.values(popupsRef.current).forEach((popup) => popup.remove());
+      markersRef.current = {};
+      popupsRef.current = {};
 
-      // Add new markers for the properties
-      items.forEach(({ latitude, longitude, title }) => {
+      // Add new markers
+      items.forEach((item) => {
         const marker = new mapboxgl.Marker()
-          .setLngLat([longitude, latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${title}</h3>`)
-          )
-          .addTo(mapInstanceRef.current!);
+          .setLngLat([item.longitude, item.latitude])
+          .addTo(map);
 
-        markersRef.current.push(marker);
+        // Style the marker element
+        const markerElement = marker.getElement();
+        markerElement.style.cursor = "pointer";
+
+        // Add click handler
+        markerElement.addEventListener("click", () => {
+          console.log("Marker clicked:", item.id);
+          onMarkerClick(item.id);
+        });
+
+        markersRef.current[item.id] = marker;
       });
 
       // Add circles for the clusters
@@ -110,25 +188,25 @@ const Map = ({ items, clusters }: MapProps) => {
           ?.match(/-?\d+\.?\d*/g)
           ?.map(Number) ?? [0, 0];
 
-        console.log("My_Geography: ", geography);
+        // console.log("My_Geography: ", geography);
         if (mapInstanceRef.current && centroid) {
           const center = [longitude, latitude]; // Center of the circle
           const radius = radiusKm; // Radius in kilometers
           const circleGeoJSON = createGeoJSONCircle(center, radius);
           const sourceId = `circle_area_${index}`;
           const layerId = sourceId;
-          console.log("Circle GeoJSON:", circleGeoJSON);
+          // console.log("Circle GeoJSON:", circleGeoJSON);
 
           if (mapInstanceRef.current.getLayer(layerId))
             mapInstanceRef.current.removeLayer(layerId);
           if (mapInstanceRef.current.getSource(sourceId))
             mapInstanceRef.current.removeSource(sourceId);
-          
+
           mapInstanceRef.current.addSource(sourceId, {
             type: "geojson",
             data: circleGeoJSON as any,
           });
-          
+
           mapInstanceRef.current.addLayer({
             id: layerId,
             type: "fill",
@@ -140,6 +218,11 @@ const Map = ({ items, clusters }: MapProps) => {
           });
         }
       });
+
+      // If there's a selected property, show its popup
+      if (selectedPropertyId) {
+        showPropertyPopup(selectedPropertyId);
+      }
     };
 
     if (mapInstanceRef.current.isStyleLoaded()) {
@@ -147,8 +230,18 @@ const Map = ({ items, clusters }: MapProps) => {
     } else {
       mapInstanceRef.current.once("styledata", handleStyleLoad);
     }
-    
-  }, [items, clusters]);
+  }, [items]);
+
+  // 3. Handle property selection separately
+  useEffect(() => {
+    if (selectedPropertyId) {
+      console.log("Selection changed:", selectedPropertyId, selectionSource);
+      showPropertyPopup(selectedPropertyId);
+    } else {
+      Object.values(popupsRef.current).forEach((popup) => popup.remove());
+      popupsRef.current = {};
+    }
+  }, [selectedPropertyId, selectionSource]); // Depend on selection changes
 
   return <div ref={mapContainerRef} className="w-full h-full rounded-lg" />;
 };

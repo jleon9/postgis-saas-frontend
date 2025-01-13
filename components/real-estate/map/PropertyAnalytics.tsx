@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, Home, MapPin, DollarSign, Maximize, Info } from "lucide-react";
+import {
+  AlertCircle,
+  Home,
+  MapPin,
+  DollarSign,
+  Maximize,
+  Info,
+} from "lucide-react";
+import { PropertySelectionContext } from "./PropertyMap";
 
 // Similarity Score Visualization
 const SimilarityScoreChart = ({ similarityScores }) => {
@@ -46,10 +54,20 @@ const SimilarityScoreChart = ({ similarityScores }) => {
   );
 };
 
-// Property Card Component
+// PropertyCard.tsx (Update this component)
 const PropertyCard = ({ property }) => {
+  const { setSelectedPropertyId } = useContext(PropertySelectionContext);
+
+  const handleClick = () => {
+    console.log("Property clicked:", property.id); // Add this for debugging
+    setSelectedPropertyId(property.id, "analytics");
+  };
+
   return (
-    <Card className="p-4">
+    <Card
+      className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+      onClick={handleClick}
+    >
       <div className="flex items-start gap-4">
         <div className="flex-1">
           <h3 className="font-medium flex items-center gap-2">
