@@ -13,6 +13,12 @@ RUN yarn install --frozen-lockfile
 # Copy the Next.js application source code
 COPY . .
 
+RUN npx zenstack generate
+
+RUN npx prisma db push
+
+RUN npx prisma db seed
+
 # Build the Next.js application for production
 RUN yarn run build
 
@@ -20,4 +26,4 @@ RUN yarn run build
 EXPOSE 3000
 
 # Set the startup command to run the Next.js server in production mode
-CMD ["yarn", "dev"]
+CMD ["yarn", "start"]
