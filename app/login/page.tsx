@@ -1,10 +1,10 @@
 // app/login/page.tsx
-'use client';
+"use client";
 
-import { useState, FormEvent, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { useAuthStore } from '@/lib/auth/authStore';
+import { useState, FormEvent, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useAuthStore } from "@/lib/auth/authStore";
 
 interface FormData {
   email: string;
@@ -17,23 +17,23 @@ interface FormErrors {
   submit?: string;
 }
 
-export default function LoginPage() {
+const Login = () => {
   const { setUser } = useAuthStore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
   // Show success message if redirected from registration
   useEffect(() => {
-    const registered = searchParams.get('registered');
-    if (registered === 'true') {
+    const registered = searchParams.get("registered");
+    if (registered === "true") {
       // You might want to show a success toast or message here
-      console.log('Registration successful! Please login.');
+      console.log("Registration successful! Please login.");
     }
   }, [searchParams]);
 
@@ -43,16 +43,16 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || "Login failed");
       }
 
       // Store user info in client state
@@ -61,24 +61,23 @@ export default function LoginPage() {
       // Navigate to dashboard
       router.replace(`/${data.user.organization.slug}/authors`);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       setErrors({
-        submit: error instanceof Error ? error.message : 'Login failed'
+        submit: error instanceof Error ? error.message : "Login failed",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: keyof FormData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData({ ...formData, [field]: e.target.value });
-    // Clear field-specific error when user starts typing
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: undefined });
-    }
-  };
+  const handleInputChange =
+    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData({ ...formData, [field]: e.target.value });
+      // Clear field-specific error when user starts typing
+      if (errors[field]) {
+        setErrors({ ...errors, [field]: undefined });
+      }
+    };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -88,8 +87,11 @@ export default function LoginPage() {
             Sign in to your account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Or{" "}
+            <Link
+              href="/register"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
               register a new organization
             </Link>
           </p>
@@ -103,7 +105,10 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700"
+            >
               Email
             </label>
             <input
@@ -111,13 +116,16 @@ export default function LoginPage() {
               type="email"
               required
               value={formData.email}
-              onChange={handleInputChange('email')}
+              onChange={handleInputChange("email")}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
               Password
             </label>
             <input
@@ -125,7 +133,7 @@ export default function LoginPage() {
               type="password"
               required
               value={formData.password}
-              onChange={handleInputChange('password')}
+              onChange={handleInputChange("password")}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
@@ -135,10 +143,18 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
       </div>
     </div>
+  );
+};
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <Login />
+    </Suspense>
   );
 }
