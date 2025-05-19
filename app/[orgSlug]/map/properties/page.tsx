@@ -28,7 +28,6 @@ export default function Home() {
 
   const {
     data: propertyClusters,
-    isLoading,
     isError,
     error,
     refetch,

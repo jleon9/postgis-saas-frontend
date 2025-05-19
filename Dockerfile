@@ -20,4 +20,4 @@ RUN yarn run build
 EXPOSE 3000
 
 # Set the startup command to run the Next.js server in production mode
-CMD ["yarn", "start"]
+CMD ["yarn", "dev"]
