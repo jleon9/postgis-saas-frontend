@@ -1,6 +1,8 @@
-import {} from "@prisma/client";
-import { faker } from "@faker-js/faker";
-import Decimal from "decimal.js";
+import {  } from '@prisma/client';
+import { faker } from '@faker-js/faker';
+import Decimal from 'decimal.js';
+
+
 
 export function fakeRole() {
   return {
@@ -113,11 +115,11 @@ export function fakePostComplete() {
 export function fakeProperty() {
   return {
     updatedAt: faker.date.anytime(),
-    address: faker.location.streetAddress(),
-    price: new Decimal(faker.number.float({ min: 0, max: 10000000 })),
-    bedrooms: faker.number.int({ min: 0, max: 20 }),
-    bathrooms: faker.number.int({ min: 0, max: 20 }),
-    sqft: faker.number.int({ min: 5, max: 20000 }),
+    address: faker.lorem.words(5),
+    price: new Decimal(faker.number.float()),
+    bedrooms: faker.number.int(),
+    bathrooms: faker.number.int(),
+    sqft: faker.number.int(),
     location: `POINT(${faker.location.longitude()} ${faker.location.latitude()})`,
   };
 }
@@ -128,14 +130,11 @@ export function fakePropertyComplete() {
     updatedAt: faker.date.anytime(),
     organizationId: faker.string.uuid(),
     address: faker.lorem.words(5),
-    price: new Decimal(faker.number.float({ min: 0, max: 10000000 })),
-    bedrooms: faker.number.int({ min: 0, max: 20 }),
-    bathrooms: faker.number.int({ min: 0, max: 20 }),
-    sqft: faker.number.int({ min: 5, max: 20000 }),
-    location: `POINT(${faker.location.longitude({
-      min: -74.2591,
-      max: -71.8562,
-    })} ${faker.location.latitude({ min: 40.4774, max: 41.366 })})`,
+    price: new Decimal(faker.number.float()),
+    bedrooms: faker.number.int(),
+    bathrooms: faker.number.int(),
+    sqft: faker.number.int(),
+    location: `POINT(${faker.location.longitude()} ${faker.location.latitude()})`,
   };
 }
 export function fakePropertySimilarity() {

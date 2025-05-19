@@ -165,7 +165,7 @@ export class PropertyAnalyticsService {
         amenity_score: number;
         total_score: number;
       }>
-    >`
+    >/* sql */`
       WITH PropertyPairs AS (
         SELECT 
           p1.id as property1_id,
