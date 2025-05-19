@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import argon2 from "argon2";
 
 const prisma = new PrismaClient();
 
@@ -120,13 +121,73 @@ const generateRandomProperties = (numProperties: number) => {
 };
 
 async function main() {
+  await prisma.$executeRaw`
+  -- Install PostGIS
+CREATE EXTENSION IF NOT EXISTS postgis;
+  `;
+
+  await prisma.$executeRaw`
+   -- Create spatial functions
+CREATE OR REPLACE FUNCTION calculate_distance(
+  lat1 float,
+  lon1 float,
+  lat2 float,
+  lon2 float
+)
+RETURNS float AS $$
+BEGIN
+  RETURN ST_Distance(
+    ST_SetSRID(ST_MakePoint(lon1, lat1), 4326)::geography,
+    ST_SetSRID(ST_MakePoint(lon2, lat2), 4326)::geography
+  );
+END;
+$$ LANGUAGE plpgsql;
+  `;
+
   console.log("Seeding Properties, Amenities, and Property Similarities...");
 
-  const numProperties = 50
-  
+  await prisma.role.create({
+    data: {
+      name: "ADMIN",
+      description: "The organization admin",
+    },
+  });
+
+  await prisma.organization.create({
+    data: {
+      name: "testorg",
+      slug: "testorg",
+      domain: "testorg.org",
+    },
+  });
+
+  const hashedPassword = await argon2.hash("Jeff1234");
+  await prisma.user.create({
+    data: {
+      name: "Jeff",
+      password: hashedPassword,
+      email: "jeff@outlook.com",
+      role: {
+        connect: {
+          name: "ADMIN",
+        },
+      },
+      organization: {
+        connect: {
+          slug: "testorg",
+        },
+      },
+    },
+    include: { role: true, organization: true },
+  });
+
+  const numProperties = 50;
+
   // Generate 50 random properties
   const properties = generateRandomProperties(numProperties);
-  const createdProperties = await Promise.all(properties.map((p) => prisma.property.create({data: p})))
+  const createdProperties = await Promise.all(
+    properties.map((p) => prisma.property.create({ data: p }))
+  );
 
   console.log("Created ", 50, " Properties");
   console.log("Seeding completed successfully!");

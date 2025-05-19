@@ -4,143 +4,143 @@
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url = env("DATABASE_URL")
 }
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres"]
+    provider = "prisma-client-js"
+    previewFeatures = ["fullTextSearchPostgres"]
 }
 
 generator seeding_generator {
-  provider = "prisma-generator-fake-data"
-  output   = "./fake-data.ts"
+    provider = "prisma-generator-fake-data"
+    output = "./fake-data.ts"
 }
 
 model Role {
-  id          String   @id() @default(uuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt()
-  name        String   @unique()
-  description String?
-  users       User[]
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    name String @unique()
+    description String?
+    users User[]
 }
 
 model Organization {
-  id         String     @id() @default(uuid())
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt()
-  name       String     @unique()
-  slug       String     @unique()
-  domain     String?    @unique()
-  users      User[]
-  authors    Author[]
-  posts      Post[]
-  properties Property[]
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    name String @unique()
+    slug String @unique()
+    domain String? @unique()
+    users User[]
+    authors Author[]
+    posts Post[]
+    properties Property[]
 }
 
 model User {
-  id             String        @id() @default(uuid())
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt()
-  email          String        @unique()
-  password       String
-  name           String
-  role           Role          @relation(fields: [roleId], references: [id])
-  roleId         String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  organizationId String
-  refreshToken   RefreshToken?
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    email String @unique()
+    password String
+    name String
+    role Role @relation(fields: [roleId], references: [id])
+    roleId String
+    organization Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+    refreshToken RefreshToken?
 
-  @@index([email])
-  @@index([organizationId])
+    @@index([email])
+    @@index([organizationId])
 }
 
 model RefreshToken {
-  id          String   @id() @default(uuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt()
-  hashedToken String
-  expires     DateTime
-  revoked     Boolean  @default(false)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String   @unique()
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    hashedToken String
+    expires DateTime
+    revoked Boolean @default(false)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId String @unique()
 
-  @@index([hashedToken])
+    @@index([hashedToken])
 }
 
 model Author {
-  id             String       @id() @default(uuid())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt()
-  name           String
-  email          String       @unique()
-  posts          Post[]
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    name String
+    email String @unique()
+    posts Post[]
+    organization Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
 
-  @@index([email])
-  @@index([organizationId])
+    @@index([email])
+    @@index([organizationId])
 }
 
 model Post {
-  id             String       @id() @default(uuid())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt()
-  title          String
-  content        String       @db.Text()
-  tags           String[]     @default([])
-  author         Author       @relation(fields: [authorId], references: [id])
-  authorId       String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    title String
+    content String @db.Text()
+    tags String[] @default([])
+    author Author @relation(fields: [authorId], references: [id])
+    authorId String
+    organization Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
 
-  @@index([authorId])
-  @@index([organizationId])
-  @@index([tags])
+    @@index([authorId])
+    @@index([organizationId])
+    @@index([tags])
 }
 
 model Property {
-  id                    String               @id() @default(uuid())
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt()
-  organization          Organization         @relation(fields: [organizationId], references: [id])
-  organizationId        String
-  address               String
-  price                 Decimal
-  bedrooms              Int
-  bathrooms             Int
-  sqft                  Int
-  ///FAKE:`POINT(${faker.location.longitude()} ${faker.location.latitude()})`
-  location              String
-  similarToProperties   PropertySimilarity[] @relation("SimilarToProperties")
-  similarFromProperties PropertySimilarity[] @relation("SimilarFromProperties")
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    organization Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+    address String
+    price Decimal
+    bedrooms Int
+    bathrooms Int
+    sqft Int
+    ///FAKE:`POINT(${faker.location.longitude()} ${faker.location.latitude()})`
+    location String
+    similarToProperties PropertySimilarity[] @relation("SimilarToProperties")
+    similarFromProperties PropertySimilarity[] @relation("SimilarFromProperties")
 }
 
 model PropertySimilarity {
-  id                String   @id() @default(uuid())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt()
-  propertyId        String
-  similarPropertyId String
-  similarity_score  Float
-  priceScore        Float
-  sizeScore         Float
-  locationScore     Float
-  amenityScore      Float
-  property          Property @relation("SimilarToProperties", fields: [propertyId], references: [id])
-  similarProperty   Property @relation("SimilarFromProperties", fields: [similarPropertyId], references: [id])
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    propertyId String
+    similarPropertyId String
+    similarity_score Float
+    priceScore Float
+    sizeScore Float
+    locationScore Float
+    amenityScore Float
+    property Property @relation("SimilarToProperties", fields: [propertyId], references: [id])
+    similarProperty Property @relation("SimilarFromProperties", fields: [similarPropertyId], references: [id])
 
-  @@unique([propertyId, similarPropertyId])
-  @@index([similarity_score])
+    @@unique([propertyId, similarPropertyId])
+    @@index([similarity_score])
 }
 
 model Amenity {
-  id        String   @id() @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt()
-  name      String
-  type      String
-  location  String
+    id String @id() @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt()
+    name String
+    type String
+    location String
 }

@@ -1,9 +1,9 @@
 // app/api/auth/refresh/route.ts
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
-import { PUBLIC_PATHS } from "@/middleware";
 import { RefreshTokenService } from "@/lib/auth/services/RefreshTokenService";
 import { prisma } from "@/lib/prisma/prisma";
+import { PUBLIC_PATHS } from "@/middleware";
 
 async function refreshTokens(request: Request) {
   console.log("🔄 [/api/auth/refresh] Starting refresh flow");

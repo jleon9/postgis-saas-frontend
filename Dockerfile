@@ -1,9 +1,23 @@
-# Use Apache AGE with PostgreSQL 16 as base image
-FROM apache/age:release_PG16_1.5.0
+# Use a Node.js 20 base image
+FROM node:20-alpine
 
-# Install PostGIS
-RUN apt-get update \
-    && apt-get install -y \
-        postgresql-16-postgis-3 \
-        postgresql-16-postgis-3-scripts \
-    && rm -rf /var/lib/apt/lists/*
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy package.json and yarn.lock
+COPY package.json yarn.lock ./
+
+# Install dependencies using Yarn
+RUN yarn install --frozen-lockfile
+
+# Copy the Next.js application source code
+COPY . .
+
+# Build the Next.js application for production
+RUN yarn run build
+
+# Expose the port that Next.js uses (default: 3000)
+EXPOSE 3000
+
+# Set the startup command to run the Next.js server in production mode
+CMD ["yarn", "start"]
